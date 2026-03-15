@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>თბილისი — Places Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#18140f;--surface:#221c15;--s2:#2c2419;--border:#3e3228;
+  --text:#ede0cf;--muted:#9c8b79;--accent:#c4814a;--accent2:#e8a96e;
+}
+/* tag palette */
+.t-coffee   {background:#d4a843;color:#18140f}
+.t-breakfast{background:#c0597a;color:#18140f}
+.t-food     {background:#c24545;color:#fff}
+.t-kids     {background:#5ab0a0;color:#18140f}
+.t-churches {background:#c9a96e;color:#18140f}
+.t-other    {background:#5e82b0;color:#18140f}
+
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+header{background:var(--bg);border-bottom:1px solid var(--border);padding:11px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+header h1{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:300;letter-spacing:.1em;color:var(--accent2)}
+.hdr-sub{font-size:10px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-top:1px}
+
+.main{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{width:296px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:9px 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;transition:all .2s;border-bottom:2px solid transparent}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent2);border-bottom-color:var(--accent)}
+.pane{display:none;flex:1;overflow-y:auto;padding:14px 16px}
+.pane.on{display:block}
+.pane::-webkit-scrollbar{width:3px}
+.pane::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.sec-h{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:12px}
+
+/* legend list */
+.leg-item{display:flex;align-items:center;gap:9px;padding:6px 5px;border-radius:6px;cursor:pointer;transition:background .15s}
+.leg-item:hover{background:var(--s2)}
+.leg-item.dim{opacity:.35}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.leg-label{font-size:12px;flex:1}
+.leg-count{font-size:10px;color:var(--muted);background:var(--s2);padding:1px 7px;border-radius:10px}
+
+.tip{font-size:11px;color:var(--muted);line-height:1.65;margin-bottom:10px}
+.tip strong{color:var(--accent2)}
+
+/* day cards */
+.day{background:var(--s2);border:1px solid var(--border);border-radius:8px;margin-bottom:9px;overflow:hidden}
+.day-hd{padding:11px 13px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background .15s}
+.day-hd:hover{background:rgba(196,129,74,.07)}
+.day-title{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;color:var(--accent2)}
+.day-sub{font-size:9.5px;color:var(--muted);letter-spacing:.09em;text-transform:uppercase;margin-top:2px}
+.day-arr{color:var(--muted);font-size:12px;transition:transform .2s}
+.day-bd{display:none;padding:0 13px 13px}
+.day-bd.on{display:block}
+.stop{display:flex;gap:8px;padding:4px 0 4px 11px;border-left:1px dashed var(--border);margin-left:4px;position:relative;align-items:baseline}
+.stop::before{content:'';position:absolute;left:-3px;top:9px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.stop-n{font-size:12px;flex:1;line-height:1.4}
+.stop-t{font-size:10px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+
+/* outside notes */
+.out-note{background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;padding:11px 13px;margin-bottom:9px}
+.out-note.q{border-left-color:#5e82b0}
+.out-title{font-size:13px;font-weight:500;margin-bottom:3px}
+.out-desc{font-size:11px;color:var(--muted);line-height:1.55}
+
+/* ── Map ── */
+#map{flex:1}
+
+/* ── Popup ── */
+.pw{max-width:290px;font-family:'DM Sans',sans-serif}
+.pw-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px}
+.pw-tag{padding:2px 8px;border-radius:12px;font-size:9.5px;font-weight:500;letter-spacing:.04em;text-transform:lowercase}
+.pw-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--accent2);line-height:1.15;margin-bottom:3px}
+.pw-addr{font-size:11px;color:var(--muted);margin-bottom:9px}
+.pw-desc{font-size:12px;line-height:1.65;margin-bottom:11px}
+.pw-from-hotel{font-size:11px;color:var(--muted);margin-bottom:9px;display:flex;gap:8px;flex-wrap:wrap}
+.pw-from-hotel span{cursor:default}
+.pw-nearby{background:var(--s2);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:11px}
+.pw-nearby strong{color:var(--text);font-weight:500}
+.pw-btns{display:flex;gap:5px}
+.pw-btn{flex:1;padding:7px 8px;border-radius:5px;font-size:10px;font-family:'DM Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;text-decoration:none;text-align:center;transition:all .2s;display:block;font-weight:500}
+.pw-a{background:var(--accent);color:#18140f;border:none}
+.pw-a:hover{background:var(--accent2);color:#18140f}
+.pw-b{background:none;color:var(--muted);border:1px solid var(--border)}
+.pw-b:hover{color:var(--text);border-color:var(--muted)}
+
+/* ── Mobile side drawer ── */
+.drawer-handle{display:none}
+.mob-toggle{display:none}
+.mob-overlay{
+  display:none;position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.45);z-index:999;
+}
+.mob-overlay.on{display:block}
+@media(max-width:640px){
+  header{padding:8px 14px;gap:10px}
+  header h1{font-size:16px}
+  .hdr-sub{display:none}
+  .mob-toggle{
+    display:flex;align-items:center;justify-content:center;
+    margin-left:auto;flex-shrink:0;
+    width:40px;height:40px;
+    background:var(--s2);border:1px solid var(--border);border-radius:8px;
+    color:var(--text);font-size:20px;cursor:pointer;font-family:sans-serif;
+  }
+  .sidebar{
+    position:fixed;top:0;left:0;
+    width:86%;max-width:300px;
+    height:100%;
+    z-index:1000;
+    -webkit-transform:translateX(-110%);
+    transform:translateX(-110%);
+    -webkit-transition:-webkit-transform .28s ease;
+    transition:transform .28s ease;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    box-shadow:4px 0 24px rgba(0,0,0,.6);
+  }
+  .sidebar.open{
+    -webkit-transform:translateX(0);
+    transform:translateX(0);
+  }
+  .pane{padding:12px 14px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>თბილისი &nbsp;·&nbsp; Tbilisi</h1>
+    <div class="hdr-sub">47 places · tap a marker → card + Google Maps</div>
+  </div>
+  <button class="mob-toggle" onclick="toggleDrawer()">☰</button>
+</header>
+<div class="mob-overlay" onclick="toggleDrawer()"></div>
+
+<div class="main">
+<div class="sidebar">
+  <div class="drawer-handle"></div>
+  <div class="tabs">
+    <button class="tab on"  onclick="switchTab('legend',this)">Categories</button>
+    <button class="tab"     onclick="switchTab('days',this)">By Day</button>
+    <button class="tab"     onclick="switchTab('outside',this)">Outside Tbilisi</button>
+  </div>
+
+  <!-- CATEGORIES TAB -->
+  <div class="pane on" id="pane-legend">
+    <div class="sec-h">Filter by category</div>
+    <div id="leg-list">
+      <div class="leg-item" id="leg-all" onclick="filterCat(null)">
+        <div class="leg-dot" style="background:var(--muted)"></div>
+        <span class="leg-label">All places</span>
+        <span class="leg-count" id="cnt-all"></span>
+      </div>
+      <div class="leg-item" id="leg-coffee" onclick="filterCat('coffee')">
+        <div class="leg-dot" style="background:#d4a843"></div>
+        <span class="leg-label">☕ coffee</span>
+        <span class="leg-count" id="cnt-coffee"></span>
+      </div>
+      <div class="leg-item" id="leg-breakfast" onclick="filterCat('breakfast')">
+        <div class="leg-dot" style="background:#c0597a"></div>
+        <span class="leg-label">🥐 breakfast</span>
+        <span class="leg-count" id="cnt-breakfast"></span>
+      </div>
+      <div class="leg-item" id="leg-food" onclick="filterCat('food')">
+        <div class="leg-dot" style="background:#c24545"></div>
+        <span class="leg-label">🍽 food</span>
+        <span class="leg-count" id="cnt-food"></span>
+      </div>
+      <div class="leg-item" id="leg-kids" onclick="filterCat('kids')">
+        <div class="leg-dot" style="background:#5ab0a0"></div>
+        <span class="leg-label">🧒 kids</span>
+        <span class="leg-count" id="cnt-kids"></span>
+      </div>
+      <div class="leg-item" id="leg-churches" onclick="filterCat('churches')">
+        <div class="leg-dot" style="background:#c9a96e"></div>
+        <span class="leg-label">⛪ churches</span>
+        <span class="leg-count" id="cnt-churches"></span>
+      </div>
+      <div class="leg-item" id="leg-other" onclick="filterCat('other')">
+        <div class="leg-dot" style="background:#5e82b0"></div>
+        <span class="leg-label">📍 other</span>
+        <span class="leg-count" id="cnt-other"></span>
+      </div>
+    </div>
+
+    <div class="sec-h" style="margin-top:16px">Tips</div>
+    <p class="tip">Tap a marker → card with <strong>Directions</strong> button to Google Maps.</p>
+    <p class="tip">Each card shows the <strong>nearest places</strong> with walking time.</p>
+    <p class="tip">Marker colour = place category.</p>
+  </div>
+
+  <!-- DAYS TAB -->
+  <div class="pane" id="pane-days">
+    <div class="sec-h">Best visited together</div>
+
+    <div class="day">
+      <div class="day-hd" onclick="toggleDay(this)">
+        <div><div class="day-title">Day 1 — Old Town</div><div class="day-sub">Sololaki · Narikala · Rike · Metekhi</div></div>
+        <span class="day-arr">▼</span>
+      </div>
+      <div class="day-bd">
+        <div class="stop"><span class="stop-n">Freedom Square — start</span><span class="stop-t">morning</span></div>
+        <div class="stop"><span class="stop-n">Chaduna / Stories Tbilisi — coffee</span><span class="stop-t">~8 min walk</span></div>
+        <div class="stop"><span class="stop-n">Rike Park</span><span class="stop-t">~10 min</span></div>
+        <div class="stop"><span class="stop-n">Narikala Fortress (cable car from Rike)</span><span class="stop-t">5 min, 2.5 GEL</span></div>
+        <div class="stop"><span class="stop-n">Botanical Garden (descend on foot)</span><span class="stop-t">~15 min walk</span></div>
+        <div class="stop"><span class="stop-n">Metekhi Church + viewpoint</span><span class="stop-t">~10 min</span></div>
+        <div class="stop"><span class="stop-n">Europe Square + Bridge of Peace</span><span class="stop-t">~8 min</span></div>
+        <div class="stop"><span class="stop-n">Darejan Palace (evening stroll)</span><span class="stop-t">nearby</span></div>
+        <div class="stop"><span class="stop-n">Wine Gallery / Vino Underground</span><span class="stop-t">evening</span></div>
+        <div class="stop"><span class="stop-n">RadioCafe / Keto &amp; Kote — dinner</span><span class="stop-t">night</span></div>
+      </div>
+    </div>
+
+    <div class="day">
+      <div class="day-hd" onclick="toggleDay(this)">
+        <div><div class="day-title">Day 2 — Rustaveli + Centre</div><div class="day-sub">Flea market · Bookshops · Coffee</div></div>
+        <span class="day-arr">▼</span>
+      </div>
+      <div class="day-bd">
+        <div class="stop"><span class="stop-n">Dry Bridge — flea market</span><span class="stop-t">morning (before 14:00)</span></div>
+        <div class="stop"><span class="stop-n">March 9th Park — artists</span><span class="stop-t">~2 min</span></div>
+        <div class="stop"><span class="stop-n">ERTI KAVA (Laghidze) — coffee</span><span class="stop-t">~10 min</span></div>
+        <div class="stop"><span class="stop-n">Auditoria — bookshop with bar</span><span class="stop-t">~5 min</span></div>
+        <div class="stop"><span class="stop-n">On The Same Page — books + wine</span><span class="stop-t">~5 min</span></div>
+        <div class="stop"><span class="stop-n">April 9th Park (Kashveti)</span><span class="stop-t">~10 min</span></div>
+        <div class="stop"><span class="stop-n">Stamba Hotel — wander around</span><span class="stop-t">~3 min</span></div>
+        <div class="stop"><span class="stop-n">Shatre — dinner with a view</span><span class="stop-t">nearby</span></div>
+        <div class="stop"><span class="stop-n">Cone Culture — ice cream</span><span class="stop-t">~2 min</span></div>
+      </div>
+    </div>
+
+    <div class="day">
+      <div class="day-hd" onclick="toggleDay(this)">
+        <div><div class="day-title">Day 3 — Vake + Turtle Lake</div><div class="day-sub">Parks · Cable car · Museum</div></div>
+        <span class="day-arr">▼</span>
+      </div>
+      <div class="day-bd">
+        <div class="stop"><span class="stop-n">Chikos Tbilisi / Kikliko — breakfast</span><span class="stop-t">morning</span></div>
+        <div class="stop"><span class="stop-n">Vake Park</span><span class="stop-t">~5 min walk</span></div>
+        <div class="stop"><span class="stop-n">Mziuri Park</span><span class="stop-t">~10 min</span></div>
+        <div class="stop"><span class="stop-n">Cable car → Turtle Lake</span><span class="stop-t">6–7 min, 6 GEL</span></div>
+        <div class="stop"><span class="stop-n">Open-Air Ethnographic Museum</span><span class="stop-t">near the lake</span></div>
+        <div class="stop"><span class="stop-n">Salty — coffee / bike ride</span><span class="stop-t">evening</span></div>
+      </div>
+    </div>
+
+    <div class="day">
+      <div class="day-hd" onclick="toggleDay(this)">
+        <div><div class="day-title">Day 4 — Mtatsminda + Vere</div><div class="day-sub">Funicular · Panorama · Cosy</div></div>
+        <span class="day-arr">▼</span>
+      </div>
+      <div class="day-bd">
+        <div class="stop"><span class="stop-n">OKRO / Early Bird — coffee</span><span class="stop-t">morning</span></div>
+        <div class="stop"><span class="stop-n">Vere Park</span><span class="stop-t">~10 min walk</span></div>
+        <div class="stop"><span class="stop-n">Vilnius Square</span><span class="stop-t">~5 min</span></div>
+        <div class="stop"><span class="stop-n">Funicular → Mtatsminda summit</span><span class="stop-t">go at sunset!</span></div>
+        <div class="stop"><span class="stop-n">Doughnuts + lemonade at the station</span><span class="stop-t">at the top</span></div>
+        <div class="stop"><span class="stop-n">Shavi Lomi / Chokhi Veraze — dinner</span><span class="stop-t">evening</span></div>
+      </div>
+    </div>
+
+    <div class="day">
+      <div class="day-hd" onclick="toggleDay(this)">
+        <div><div class="day-title">Day 5 — Avlabari + Sameba</div><div class="day-sub">Cathedral · Market · Dukhan</div></div>
+        <span class="day-arr">▼</span>
+      </div>
+      <div class="day-bd">
+        <div class="stop"><span class="stop-n">Holy Trinity Cathedral (Sameba)</span><span class="stop-t">morning</span></div>
+        <div class="stop"><span class="stop-n">Chashnagiri — lunch in Avlabari</span><span class="stop-t">~10 min taxi</span></div>
+        <div class="stop"><span class="stop-n">Dezerter Bazaar — market</span><span class="stop-t">~10 min</span></div>
+        <div class="stop"><span class="stop-n">Racha — dukhan, dinner</span><span class="stop-t">2 min from Freedom Square</span></div>
+        <div class="stop"><span class="stop-n">Fragment / Keto &amp; Kote</span><span class="stop-t">Old Town, evening</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTSIDE TAB -->
+  <div class="pane" id="pane-outside">
+    <div class="sec-h">Not Tbilisi — not on the map</div>
+    <div class="out-note">
+      <div class="out-title">🦠 Prometheus Caves</div>
+      <div class="out-desc">Kutaisi / Tskaltubo — ~240 km, ~3 h by car or train to Kutaisi. Georgia's largest cave system: 1420 m route, 6 illuminated halls with classical music. Optional boat ride on an underground river. Ticket ~€2.7. Plan 1–2 days.</div>
+    </div>
+    <div class="out-note">
+      <div class="out-title">🦕 Sataplia Nature Reserve</div>
+      <div class="out-desc">Near Prometheus Caves, Kutaisi. Dinosaur footprints. Combine with the caves — one day trip from Kutaisi.</div>
+    </div>
+    <div class="out-note">
+      <div class="out-title">⛪ Jvari Monastery</div>
+      <div class="out-desc">Mtskheta — ~20 km, ~30 min by car. 6th century. Taxi only: €9–16. Best combined with Mtskheta (Svetitskhoveli Cathedral).</div>
+    </div>
+    <div style="margin-top:14px"><div class="sec-h">Under question</div>
+      <div class="out-note q">
+        <div class="out-title">🏊 Gino Paradise Water Park</div>
+        <div class="out-desc">Technically within Tbilisi city limits (Kiketi district, mountain resort) but ~40 min from the centre. Open year-round, entry from 40 GEL (€13). Has a SPA centre. Let me know — I'll add it to the map.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── MAP ──────────────────────────────────────────────────────────────────────
+const map = L.map('map',{center:[41.6938,44.8015],zoom:14});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+  attribution:'© OpenStreetMap © CARTO',maxZoom:19
+}).addTo(map);
+
+// ── TAG CONFIG ───────────────────────────────────────────────────────────────
+const TAGS = {
+  coffee:   {color:'#d4a843',fg:'#18140f'},
+  breakfast:{color:'#c0597a',fg:'#18140f'},
+  food:     {color:'#c24545',fg:'#fff'},
+  kids:     {color:'#5ab0a0',fg:'#18140f'},
+  churches: {color:'#c9a96e',fg:'#18140f'},
+  other:    {color:'#5e82b0',fg:'#18140f'},
+};
+
+function mkIcon(primaryTag){
+  const t=TAGS[primaryTag];
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:30px;height:30px;background:${t.color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 10px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:14px">${{coffee:'☕',breakfast:'🥐',food:'🍽',kids:'🧒',churches:'⛪',other:'📍'}[primaryTag]}</span></div>`,
+    iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-34]
+  });
+}
+
+// ── DISTANCE ─────────────────────────────────────────────────────────────────
+function dist(a,b){
+  const R=6371000,r=x=>x*Math.PI/180;
+  const dLat=r(b.lat-a.lat),dLng=r(b.lng-a.lng);
+  const s=Math.sin(dLat/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+// nearby places walk time (Tbilisi path factor ~2.5, Google pace ~100m/min)
+function walk(m){return Math.max(2,Math.ceil(m*2.5/100))+'min walk'}
+
+// ── PLACES ───────────────────────────────────────────────────────────────────
+// tags[0] = primary (determines marker color)
+// walk/taxi = minutes from hotel (pre-calculated to match Google Maps)
+// walk:null = too far to walk comfortably (>50 min)
+const PLACES = [
+
+  // ── COFFEE ───────────────────────────────────────────────────────────────
+  { name:'ERTI KAVA coffee room',
+    tags:['coffee'],
+    addr:'8, Mitropan Laghidze',
+    desc:'Voted best coffee in the city by locals. Ethiopian beans, all-day breakfast — sometimes with live music.',
+    lat:41.6963,lng:44.7985, walk:13,taxi:6 },
+
+  { name:'Erti Kava (Rustaveli)',
+    tags:['kids'],
+    addr:'Rustaveli Ave',
+    desc:'Family-friendly: kids\' play zone with toys and swings instead of high chairs.',
+    lat:41.7008,lng:44.7975, walk:12,taxi:6 },
+
+  { name:'Chika Coffee',
+    tags:['coffee'],
+    addr:'9, Merab Kostava; Bazari Orbeliani',
+    desc:'Specialty coffee + brunch: prawn omelettes, avocado toast, salmon waffles.',
+    lat:41.7022,lng:44.7952, walk:13,taxi:6 },
+
+  { name:'Stories Tbilisi',
+    tags:['coffee'],
+    addr:'9, Galaktion Tabidze',
+    desc:'Cosy spot in the very centre: AeroPress, V60, raf and a famous cheesecake.',
+    lat:41.6918,lng:44.8018, walk:26,taxi:8 },
+
+  { name:'Salty',
+    tags:['coffee'],
+    addr:'14, Platon Ioseliani',
+    desc:'Coffee, wine and a bike workshop in one: rent a bike and ride on.',
+    lat:41.7038,lng:44.7885, walk:19,taxi:7 },
+
+  { name:'Chaduna',
+    tags:['coffee'],
+    addr:'18, Galaktion Tabidze',
+    desc:'Sololaki: all-day breakfast (shakshuka, quesadilla) and good wine in the evening.',
+    lat:41.6920,lng:44.8022, walk:26,taxi:8 },
+
+  { name:'Stamba Hotel',
+    tags:['coffee'],
+    addr:'14, Merab Kostava',
+    desc:'Hotel-destination: restaurant, café, coworking, art books, open-air amphitheatre. Work by day, cocktails by night.',
+    lat:41.7020,lng:44.7956, walk:13,taxi:6 },
+
+  // ── BREAKFAST ────────────────────────────────────────────────────────────
+  { name:'Chikos Tbilisi',
+    tags:['breakfast'],
+    addr:'11a, Ilia Chavchavadze Avenue',
+    desc:'On best-of-Tbilisi lists. Breakfast and coffee in Vake.',
+    lat:41.7062,lng:44.7841, walk:29,taxi:9 },
+
+  { name:'OKRO',
+    tags:['breakfast'],
+    addr:'12, Iakob Nikoladze',
+    desc:'Free-refill filter coffee, all-day breakfast — a favourite of freelancers. Cheese pancakes, blini, granola.',
+    lat:41.6978,lng:44.7990, walk:13,taxi:6 },
+
+  { name:'Kikliko',
+    tags:['breakfast'],
+    addr:'28, Mtskheta St',
+    desc:'Brunch café with a lovely courtyard. Kikliko are signature toasts with unexpected toppings: aubergine, almond, citrus.',
+    lat:41.7055,lng:44.7948, walk:21,taxi:7 },
+
+  { name:'Early Bird',
+    tags:['breakfast'],
+    addr:'2, Bazaleti',
+    desc:'Spiced teas, rafs, spicy cocoa. Cheese pancakes every which way — try the pesto & parmesan.',
+    lat:41.7005,lng:44.7958, walk:9,taxi:5 },
+
+  // ── FOOD ─────────────────────────────────────────────────────────────────
+  { name:'Shatre',
+    tags:['food'],
+    addr:'38, Rustaveli Ave',
+    desc:'Khinkali and wood-fired khachapuri with a view over Rustaveli. Sand-brewed coffee breakfast — best start to the day.',
+    lat:41.7010,lng:44.7978, walk:13,taxi:6 },
+
+  { name:'Shavi Lomi',
+    tags:['food'],
+    addr:'28, Zurab Kvlividze',
+    desc:'Old Tbilisi apartment: fireplace, rugs, antiques. Creative Georgian cuisine — in the parlour or the shaded green courtyard.',
+    lat:41.6905,lng:44.8078, walk:38,taxi:10 },
+
+  { name:'Chokhi Veraze',
+    tags:['food'],
+    addr:'18, Erekle Tatishvili',
+    desc:'Stylish Georgian food with a terrace. House speciality: green khinkali with tarragon.',
+    lat:41.6880,lng:44.8093, walk:44,taxi:12 },
+
+  { name:'Keto & Kote',
+    tags:['food'],
+    addr:'3, Mikheil Zandukeli',
+    desc:'"Secret" terrace with city views — book in advance or face the door policy. Corn flatbread with pkhali + homemade red wine.',
+    lat:41.6895,lng:44.8053, walk:35,taxi:10 },
+
+  { name:'RadioCafe',
+    tags:['food'],
+    addr:'29, Atoneli',
+    desc:'Live piano on the terrace, khachapuri with creative fillings. A festive atmosphere.',
+    lat:41.6893,lng:44.8032, walk:33,taxi:10 },
+
+  { name:'Fragment',
+    tags:['food'],
+    addr:'14, Alexander Tsursysumia',
+    desc:'Live music, candles and flowers on every table. Georgian food in a celebratory setting.',
+    lat:41.6915,lng:44.8045, walk:31,taxi:9 },
+
+  { name:'Racha (dukhan)',
+    tags:['food'],
+    addr:'6, Lermontov St',
+    desc:'Legendary basement two minutes from Freedom Square. Kebab in lavash, homemade wine in a clay vessel.',
+    lat:41.6948,lng:44.7993, walk:16,taxi:6 },
+
+  { name:'Chashnagiri',
+    tags:['food'],
+    addr:'2/6, Beliashvili St',
+    desc:'Cosy neighbourhood restaurant in Avlabari. No tourist markup.',
+    lat:41.6940,lng:44.8182, walk:null,taxi:13 },
+
+  { name:'Cone Culture',
+    tags:['food'],
+    addr:'5, Taras Shevchenko; 3, Vekua St',
+    desc:'Artisan ice cream behind parliament: lavender honey next to mustard and bacon. Regular ice cream will never taste the same.',
+    lat:41.6973,lng:44.7978, walk:11,taxi:5 },
+
+  { name:'Gldani Shawarma',
+    tags:['food'],
+    addr:'28, Akaki Vasadze / Iona Vakeli (Gldani)',
+    desc:'Best shawarma in Tbilisi — huge portions, 10+ varieties, garlic + chilli sauce. Not central, but delivers via Wolt/Glovo.',
+    lat:41.7660,lng:44.7920, walk:null,taxi:39 },
+
+  // ── WINE (→ other) ────────────────────────────────────────────────────────
+  { name:'Wine Gallery',
+    tags:['other'],
+    addr:'39, Tsinamdzgvrishvli',
+    desc:'One of the best wine bars in the Old Town — a must-stop.',
+    lat:41.6872,lng:44.8072, walk:43,taxi:11 },
+
+  { name:'Vino Underground',
+    tags:['other'],
+    addr:'15, Galaktion Tabidze',
+    desc:'Wine cellar in the Old Town — must visit for natural wine lovers.',
+    lat:41.6920,lng:44.8015, walk:25,taxi:8 },
+
+  // ── KIDS (parks, playgrounds, bookshops) ─────────────────────────────────
+  { name:'Botanical Garden',
+    tags:['kids'],
+    addr:'1, Botanikuri',
+    desc:'Jungle in the city: vines, cacti, bamboo, waterfall. Plus rock climbing and seasonal festivals.',
+    lat:41.6861,lng:44.8103, walk:null,taxi:13 },
+
+  { name:'Vere Park',
+    tags:['kids'],
+    addr:'Vera district',
+    desc:'Backgammon, zipline, dogs at the fountains and a great playground — full of life at any hour.',
+    lat:41.6998,lng:44.7947, walk:6,taxi:5 },
+
+  { name:'Vilnius Square',
+    tags:['kids'],
+    addr:'Opposite lower funicular station, Mtatsminda',
+    desc:'Quiet square by the funicular — slide, swings, nice for an evening wind-down.',
+    lat:41.6955,lng:44.7962, walk:10,taxi:5 },
+
+  { name:'April 9th Park',
+    tags:['kids'],
+    addr:'Rustaveli Ave (behind Kashveti Church)',
+    desc:'Hidden behind Kashveti Church: a playground among wooden sculptures and monuments.',
+    lat:41.7003,lng:44.7985, walk:13,taxi:6 },
+
+  { name:'Vake Park',
+    tags:['kids'],
+    addr:'Between Chavchavadze Ave and Mishveladze St',
+    desc:'Former Victory Park: memorial statue, children\'s rides, picnic areas, arboretum. Inside — a media library with cartoons on weekends and crafts on weekdays.',
+    lat:41.7028,lng:44.7820, walk:27,taxi:8 },
+
+  { name:'Turtle Lake',
+    tags:['kids'],
+    addr:'Northern slope of Mtatsminda',
+    desc:'Swimming, pedalo, picnic, hiking. Get here by cable car from Vake Park (6 GEL, ~7 min).',
+    lat:41.7140,lng:44.7702, walk:null,taxi:16 },
+
+  { name:'Mziuri Park',
+    tags:['kids'],
+    addr:'Chavchavadze Ave',
+    desc:'"Georgian Disneyland" conceived by writer Nodar Dumbadze: winding paths, amphitheatre, pond.',
+    lat:41.7052,lng:44.7803, walk:33,taxi:10 },
+
+  { name:'Rose Park',
+    tags:['kids'],
+    addr:'Chugureti district',
+    desc:'Small green oasis in Chugureti: table tennis and a greenhouse café.',
+    lat:41.7048,lng:44.8050, walk:32,taxi:9 },
+
+  { name:'Open-Air Ethnographic Museum',
+    tags:['kids'],
+    addr:'Near Turtle Lake',
+    desc:'Open-air museum with traditional buildings from every region of Georgia. Right next to Turtle Lake.',
+    lat:41.7110,lng:44.7672, walk:null,taxi:15 },
+
+  { name:'Deda Ena Park',
+    tags:['kids'],
+    addr:'Near Dry Bridge',
+    desc:'Toddler playground and Tbili Sio café on a former winery grounds. Dry Bridge is just overhead.',
+    lat:41.6968,lng:44.8016, walk:19,taxi:7 },
+
+  { name:'BiblioNas',
+    tags:['kids'],
+    addr:'18, Spiridon Kedia St',
+    desc:'Children\'s bookshop.',
+    lat:41.7010,lng:44.7962, walk:11,taxi:5 },
+
+  { name:'Auditoria',
+    tags:['kids'],
+    addr:'22-26, Simon Janashia',
+    desc:'Books + bar + lecture hall. Wide selection in Russian and English, bright space, good for working.',
+    lat:41.7005,lng:44.7938, walk:7,taxi:5 },
+
+  { name:'On The Same Page',
+    tags:['kids'],
+    addr:'57, Vasil Barnov',
+    desc:'Books and wine: RU/UA/EN/KA in equal measure + a solid children\'s section.',
+    lat:41.6990,lng:44.7928, walk:4,taxi:5 },
+
+  { name:'Rike Park',
+    tags:['kids'],
+    addr:'Rike Park, Old Town',
+    desc:'Park by the Kura shaped like the map of Georgia. Cable car to Narikala departs from here (2.5 GEL).',
+    lat:41.6927,lng:44.8070, walk:33,taxi:10 },
+
+  // ── CHURCHES ─────────────────────────────────────────────────────────────
+  { name:'Metekhi Church',
+    tags:['churches'],
+    addr:'Left bank of the Kura River',
+    desc:'Viewpoint over Narikala from the left bank of the Kura. At the entrance — equestrian statue of King Vakhtang Gorgasali, founder of Tbilisi.',
+    lat:41.6893,lng:44.8101, walk:44,taxi:12 },
+
+  { name:'Holy Trinity Cathedral (Sameba)',
+    tags:['churches'],
+    addr:'Sameba, Avlabari',
+    desc:'Tallest Orthodox cathedral in Georgia — 9 churches, several underground floors. On the grounds: the best adjarian khachapuri in the city.',
+    lat:41.6943,lng:44.8211, walk:null,taxi:15 },
+
+  // ── OTHER ─────────────────────────────────────────────────────────────────
+  { name:'Freedom Square',
+    tags:['other'],
+    addr:'Freedom Square, Sololaki',
+    desc:'The ideal starting point for exploring Tbilisi — head straight into the Old Town. Barely changed in 200 years.',
+    lat:41.6940,lng:44.8007, walk:20,taxi:7 },
+
+  { name:'Narikala Fortress',
+    tags:['other'],
+    addr:'20, J.Ajiashvili St',
+    desc:'4th century. Best city panorama from the towers — especially in the early evening. Cable car from Rike Park (2.5 GEL, 11:00–23:00).',
+    lat:41.6883,lng:44.8072, walk:41,taxi:11 },
+
+  { name:'Europe Square + Bridge of Peace',
+    tags:['other'],
+    addr:'Europe Square',
+    desc:'The glass pedestrian Bridge of Peace — Tbilisi\'s Instagram landmark. Street musicians gather here every evening.',
+    lat:41.6928,lng:44.8082, walk:35,taxi:10 },
+
+  { name:'Darejan Palace',
+    tags:['other'],
+    addr:'Near Europe Square',
+    desc:'Ancient quarter with steep lanes. At night it feels like stepping back in time.',
+    lat:41.6910,lng:44.8097, walk:40,taxi:11 },
+
+  { name:'Funicular / Mtatsminda',
+    tags:['other'],
+    addr:'Lower station, Vilnius Square',
+    desc:'Ride up at sunset: the best panoramic view of Tbilisi + signature doughnuts and lemonades at the top. Fare €0.77.',
+    lat:41.6965,lng:44.7972, walk:10,taxi:5 },
+
+  { name:'Dry Bridge',
+    tags:['other'],
+    addr:'Dry Bridge over the Kura River',
+    desc:'Antique flea market morning to early afternoon: watches, daggers, rugs, coins. Worth a look even if you\'re not buying.',
+    lat:41.6975,lng:44.8012, walk:18,taxi:7 },
+
+  { name:'March 9th Park (artists)',
+    tags:['other'],
+    addr:'At the end of the Dry Bridge flea market',
+    desc:'At the far end of the market stalls, artists display original Georgian-character works. Cash only.',
+    lat:41.6970,lng:44.8020, walk:19,taxi:7 },
+
+  { name:'Dezerter Bazaar',
+    tags:['other'],
+    addr:'5, Abastumani',
+    desc:'The city\'s main market: fruit, preserves, churchkhela, homemade wine, cheese and panduri. The left-hand side is where the gold is.',
+    lat:41.7013,lng:44.8124, walk:42,taxi:11 },
+];
+
+// ── MARKERS ───────────────────────────────────────────────────────────────────
+const markers = [];
+
+const HOTEL = {lat:41.6981, lng:44.7930};
+
+// times are hardcoded per-place to match Google Maps
+
+PLACES.forEach((p,i)=>{
+  const m = L.marker([p.lat,p.lng],{icon:mkIcon(p.tags[0])});
+  m._place = p;
+  m._idx   = i;
+
+  m.on('click',()=>{
+    const nearest = PLACES
+      .map((q,j)=>({q,j,d:dist(p,q)}))
+      .filter(x=>x.j!==i)
+      .sort((a,b)=>a.d-b.d)
+      .slice(0,3);
+    const nearbyHtml = nearest.map(x=>`<strong>${x.q.name}</strong> — ${walk(x.d)}`).join('<br>');
+
+    const tagPills = p.tags.map(t=>{
+      const{color,fg}=TAGS[t];
+      return `<span class="pw-tag" style="background:${color};color:${fg}">${t}</span>`;
+    }).join('');
+
+    const gmDir  = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.name+', '+p.addr+', Tbilisi, Georgia')}`;
+    const gmFind = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name+', Tbilisi')}`;
+    const gmWalk = `https://www.google.com/maps/dir/${HOTEL.lat},${HOTEL.lng}/${p.lat},${p.lng}/data=!4m2!4m1!3e2`;
+    const gmDrive= `https://www.google.com/maps/dir/${HOTEL.lat},${HOTEL.lng}/${p.lat},${p.lng}/`;
+    const walkHtml = p.walk ? `<a href="${gmWalk}" target="_blank" style="color:var(--accent2);text-decoration:none">🚶 ${p.walk} min ↗</a>  ` : '';
+    const taxiHtml = `<a href="${gmDrive}" target="_blank" style="color:var(--accent2);text-decoration:none">🚕 ${p.taxi} min ↗</a>`;
+
+    m.bindPopup(`<div class="pw">
+      <div class="pw-tags">${tagPills}</div>
+      <div class="pw-name">${p.name}</div>
+      <div class="pw-addr">${p.addr}</div>
+      <div class="pw-desc">${p.desc}</div>
+      <div class="pw-from-hotel">🏠 from hotel: ${walkHtml}${taxiHtml}</div>
+      <div class="pw-nearby">📍 Nearby:<br>${nearbyHtml}</div>
+      <div class="pw-btns">
+        <a href="${gmDir}"  target="_blank" class="pw-btn pw-a">↗ Directions</a>
+        <a href="${gmFind}" target="_blank" class="pw-btn pw-b">Find</a>
+      </div>
+    </div>`,{maxWidth:310}).openPopup();
+  });
+
+  m.addTo(map);
+  markers.push(m);
+});
+
+// ── CATEGORY FILTER ───────────────────────────────────────────────────────────
+let activeCat = null;
+
+function filterCat(cat){
+  activeCat = cat;
+  document.querySelectorAll('.leg-item').forEach(el=>{
+    el.classList.toggle('dim', !!cat && el.id!=='leg-all' && el.id!=='leg-'+cat);
+  });
+  markers.forEach(m=>{
+    const show = !cat || m._place.tags.includes(cat);
+    show ? m.addTo(map) : map.removeLayer(m);
+  });
+}
+
+// populate counts
+(function(){
+  const cats = Object.keys(TAGS);
+  document.getElementById('cnt-all').textContent = PLACES.length;
+  cats.forEach(c=>{
+    const n = PLACES.filter(p=>p.tags.includes(c)).length;
+    const el = document.getElementById('cnt-'+c);
+    if(el) el.textContent = n;
+  });
+})();
+
+// ── HOTEL MARKER ──────────────────────────────────────────────────────────────
+(function(){
+  const hotelIcon = L.divIcon({
+    className:'',
+    html:`<div style="width:34px;height:34px;background:#fff;border-radius:50%;box-shadow:0 2px 12px rgba(0,0,0,.6);border:3px solid #c4814a;display:flex;align-items:center;justify-content:center;font-size:16px">🏠</div>`,
+    iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-22]
+  });
+  const hotelLat=41.6981, hotelLng=44.7930;
+  L.marker([hotelLat,hotelLng],{icon:hotelIcon})
+    .bindPopup(`<div class="pw">
+      <div class="pw-name" style="font-size:16px">🏠 Your Hotel</div>
+      <div class="pw-addr">17 Ivane Kereselidze St, 0108</div>
+      <div class="pw-desc">Starting point for all routes.</div>
+      <div class="pw-btns">
+        <a href="https://www.google.com/maps/dir/?api=1&destination=${hotelLat},${hotelLng}" target="_blank" class="pw-btn pw-a">↗ Directions</a>
+        <a href="https://www.google.com/maps/search/?api=1&query=17+Ivane+Kereselidze+Tbilisi" target="_blank" class="pw-btn pw-b">Find</a>
+      </div>
+    </div>`,{maxWidth:310})
+    .addTo(map);
+})();
+
+// ── MOBILE DRAWER ─────────────────────────────────────────────────────────────
+function toggleDrawer(){
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.querySelector('.mob-overlay').classList.toggle('on');
+}
+
+// ── TAB SWITCH ────────────────────────────────────────────────────────────────
+function switchTab(name,btn){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('pane-'+name).classList.add('on');
+}
+
+// ── DAY TOGGLE ────────────────────────────────────────────────────────────────
+function toggleDay(hd){
+  const bd=hd.nextElementSibling,arr=hd.querySelector('.day-arr');
+  const open=bd.classList.contains('on');
+  document.querySelectorAll('.day-bd').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.day-arr').forEach(a=>a.style.transform='');
+  if(!open){bd.classList.add('on');arr.style.transform='rotate(180deg)'}
+}
+
+// ── POPUP STYLES ──────────────────────────────────────────────────────────────
+const s=document.createElement('style');
+s.textContent=`
+  .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#221c15!important;border:1px solid #3e3228!important;color:#ede0cf!important;box-shadow:0 8px 32px rgba(0,0,0,.65)!important}
+  .leaflet-popup-close-button{color:#8a7a69!important;top:8px!important;right:9px!important;font-size:17px!important}
+  .leaflet-popup-content{margin:14px 15px!important}
+  .leaflet-container a.pw-a{color:#18140f!important;text-decoration:none!important}
+  .leaflet-container a.pw-a:hover{color:#18140f!important;background:var(--accent2)!important}
+  .leaflet-container a.pw-b{color:var(--muted)!important;text-decoration:none!important}
+  .leaflet-container a.pw-b:hover{color:var(--text)!important}
+`;
+document.head.appendChild(s);
+</script>
+</body>
+</html>
