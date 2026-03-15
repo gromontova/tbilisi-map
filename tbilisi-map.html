@@ -667,7 +667,7 @@ PLACES.forEach((p,i)=>{
   m._place = p;
   m._idx   = i;
 
-  m.on('click',()=>{
+  m.bindPopup(function(){
     const nearest = PLACES
       .map((q,j)=>({q,j,d:dist(p,q)}))
       .filter(x=>x.j!==i)
@@ -681,13 +681,12 @@ PLACES.forEach((p,i)=>{
     }).join('');
 
     const gmDir  = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.name+', '+p.addr+', Tbilisi, Georgia')}`;
-    const gmFind = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name+', Тбилиси')}`;
     const gmWalk = `https://www.google.com/maps/dir/${HOTEL.lat},${HOTEL.lng}/${p.lat},${p.lng}/data=!4m2!4m1!3e2`;
     const gmDrive= `https://www.google.com/maps/dir/${HOTEL.lat},${HOTEL.lng}/${p.lat},${p.lng}/`;
     const walkHtml = p.walk ? `<a href="${gmWalk}" target="_blank" style="color:var(--accent2);text-decoration:none">🚶 ${p.walk} мин ↗</a>  ` : '';
     const taxiHtml = `<a href="${gmDrive}" target="_blank" style="color:var(--accent2);text-decoration:none">🚕 ${p.taxi} мин ↗</a>`;
 
-    m.bindPopup(`<div class="pw">
+    return `<div class="pw">
       <div class="pw-tags">${tagPills}</div>
       <div class="pw-name">${p.name}</div>
       <div class="pw-addr">${p.addr}</div>
@@ -696,10 +695,9 @@ PLACES.forEach((p,i)=>{
       <div class="pw-nearby">📍 Рядом:<br>${nearbyHtml}</div>
       <div class="pw-btns">
         <a href="${gmDir}"  target="_blank" class="pw-btn pw-a">↗ Маршрут</a>
-        <a href="${gmFind}" target="_blank" class="pw-btn pw-b">Найти</a>
       </div>
-    </div>`,{maxWidth:310}).openPopup();
-  });
+    </div>`;
+  },{maxWidth:310});
 
   m.addTo(map);
   markers.push(m);
@@ -745,11 +743,40 @@ function filterCat(cat){
       <div class="pw-desc">Исходная точка маршрутов.</div>
       <div class="pw-btns">
         <a href="https://www.google.com/maps/dir/?api=1&destination=${hotelLat},${hotelLng}" target="_blank" class="pw-btn pw-a">↗ Маршрут</a>
-        <a href="https://www.google.com/maps/search/?api=1&query=17+Ivane+Kereselidze+Tbilisi" target="_blank" class="pw-btn pw-b">Найти</a>
       </div>
     </div>`,{maxWidth:310})
     .addTo(map);
 })();
+
+// ── OLD TOWN BOUNDARY ─────────────────────────────────────────────────────────
+L.polygon([
+  [41.6960, 44.7982],
+  [41.6943, 44.8012],
+  [41.6921, 44.8042],
+  [41.6905, 44.8062],
+  [41.6887, 44.8068],
+  [41.6868, 44.8048],
+  [41.6855, 44.8015],
+  [41.6857, 44.7975],
+  [41.6870, 44.7952],
+  [41.6893, 44.7938],
+  [41.6922, 44.7940],
+  [41.6945, 44.7956],
+  [41.6960, 44.7982],
+],{color:'#e05555',weight:2,fill:false,dashArray:'6,4',opacity:.75}).addTo(map);
+
+// ── GEOLOCATION ───────────────────────────────────────────────────────────────
+let _geoMarker = null;
+map.locate({watch:true, enableHighAccuracy:true, timeout:10000, maximumAge:0});
+map.on('locationfound', function(e){
+  if(_geoMarker){ _geoMarker.setLatLng(e.latlng); return; }
+  const geoIcon = L.divIcon({
+    className:'',
+    html:'<div style="width:14px;height:14px;background:#4dabf7;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 6px rgba(77,171,247,.25)"></div>',
+    iconSize:[14,14],iconAnchor:[7,7]
+  });
+  _geoMarker = L.marker(e.latlng,{icon:geoIcon,zIndexOffset:600}).addTo(map);
+});
 
 // ── MOBILE DRAWER ─────────────────────────────────────────────────────────────
 function toggleDrawer(){
