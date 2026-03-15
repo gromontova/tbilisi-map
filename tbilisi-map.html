@@ -345,6 +345,14 @@ function mkIcon(primaryTag){
     iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-34]
   });
 }
+function mkBookIcon(primaryTag){
+  const t=TAGS[primaryTag];
+  return L.divIcon({
+    className:'',
+    html:`<div style="position:relative;width:38px;height:36px"><div style="width:30px;height:30px;background:${t.color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 10px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:13px">🧒</span></div><span style="position:absolute;top:-5px;right:0;font-size:15px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.8))">📚</span></div>`,
+    iconSize:[38,36],iconAnchor:[15,36],popupAnchor:[0,-38]
+  });
+}
 
 // ── DISTANCE ─────────────────────────────────────────────────────────────────
 function dist(a,b){
@@ -369,23 +377,11 @@ const PLACES = [
     desc:'Семейное: детская зона с игрушками и качели вместо стульчиков для детей.',
     lat:41.7008,lng:44.7975, walk:12,taxi:6 },
 
-  { name:'Salty',
-    tags:['coffee'],
-    addr:'14, Platon Ioseliani',
-    desc:'Кофе, вино и веломастерская в одном: арендуй байк и езжай дальше.',
-    lat:41.7038,lng:44.7885, walk:19,taxi:7 },
-
   { name:'Chaduna',
     tags:['coffee'],
     addr:'18, Galaktion Tabidze',
     desc:'Сололаки: завтраки весь день (шакшука, кесадилья) и хорошее вино вечером.',
     lat:41.6920,lng:44.8022, walk:26,taxi:8 },
-
-  { name:'Chikos Tbilisi',
-    tags:['breakfast'],
-    addr:'11a, Ilia Chavchavadze Avenue',
-    desc:'В рейтинге лучших мест Тбилиси. Завтраки и кофе в Ваке.',
-    lat:41.7062,lng:44.7841, walk:29,taxi:9 },
 
   { name:'OKRO',
     tags:['breakfast'],
@@ -393,11 +389,6 @@ const PLACES = [
     desc:'Фри-рефилл фильтра, завтраки весь день — облюбовали фрилансеры. Сырники, блинчики, гранола.',
     lat:41.6978,lng:44.7990, walk:13,taxi:6 },
 
-  { name:'Kikliko',
-    tags:['breakfast'],
-    addr:'28, Mtskheta St',
-    desc:'Бранч-кафе с уютным двором. Киклико — авторские гренки с неожиданными начинками: баклажан, миндаль, цитрус.',
-    lat:41.7055,lng:44.7948, walk:21,taxi:7 },
 
   { name:'Early Bird',
     tags:['breakfast'],
@@ -548,7 +539,7 @@ const PLACES = [
 
   // ── KIDS ─────────────────────────────────────────────────────────────────
   { name:'BiblioNas',
-    tags:['kids'],
+    tags:['kids'], book:true,
     addr:'18, Spiridon Kedia St',
     desc:'Детский книжный.',
     lat:41.7010,lng:44.7962, walk:11,taxi:5 },
@@ -615,13 +606,13 @@ const PLACES = [
     lat:41.6970,lng:44.8020, walk:19,taxi:7 },
 
   { name:'Auditoria',
-    tags:['kids'],
+    tags:['kids'], book:true,
     addr:'22-26, Simon Janashia',
     desc:'Книги + бар + лекторий. Много литературы на русском, светлое пространство, можно поработать.',
     lat:41.7005,lng:44.7938, walk:7,taxi:5 },
 
   { name:'On The Same Page',
-    tags:['kids'],
+    tags:['kids'], book:true,
     addr:'57, Vasil Barnov',
     desc:'Книги и вино: RU/UA/EN/KA в равных долях + хорошая детская полка.',
     lat:41.6990,lng:44.7928, walk:4,taxi:5 },
@@ -660,7 +651,7 @@ function toggleVisited(idx, el){
 // times are hardcoded per-place to match Google Maps
 
 PLACES.forEach((p,i)=>{
-  const m = L.marker([p.lat,p.lng],{icon:mkIcon(p.tags[0])});
+  const m = L.marker([p.lat,p.lng],{icon:p.book ? mkBookIcon(p.tags[0]) : mkIcon(p.tags[0])});
   m._place = p;
   m._idx   = i;
 
