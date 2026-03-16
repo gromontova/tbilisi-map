@@ -607,9 +607,10 @@ PLACES.forEach((p,i)=>{
       return `<span class="pw-tag" style="background:${color};color:${fg}">${t}</span>`;
     }).join('');
 
-    const gmDir  = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.name+', '+p.addr+', Tbilisi, Georgia')}`;
-    const gmWalk = `https://www.google.com/maps/dir/${HOTEL.lat},${HOTEL.lng}/${p.lat},${p.lng}/data=!4m2!4m1!3e2`;
-    const gmDrive= `https://www.google.com/maps/dir/${HOTEL.lat},${HOTEL.lng}/${p.lat},${p.lng}/`;
+    const dest   = encodeURIComponent(p.name+', '+p.addr+', Tbilisi, Georgia');
+    const gmDir  = `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+    const gmWalk = `https://www.google.com/maps/dir/?api=1&origin=${HOTEL.lat},${HOTEL.lng}&destination=${dest}&travelmode=walking`;
+    const gmDrive= `https://www.google.com/maps/dir/?api=1&origin=${HOTEL.lat},${HOTEL.lng}&destination=${dest}&travelmode=driving`;
     const walkHtml = p.walk ? `<a href="${gmWalk}" target="_blank" style="color:var(--accent2);text-decoration:none">🚶 ${p.walk} min ↗</a>  ` : '';
     const taxiHtml = `<a href="${gmDrive}" target="_blank" style="color:var(--accent2);text-decoration:none">🚕 ${p.taxi} min ↗</a>`;
 
