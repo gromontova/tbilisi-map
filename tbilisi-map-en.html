@@ -689,16 +689,21 @@ function filterCat(cat){
   const gmWalkD=`https://www.google.com/maps/dir/${hotelLat2},${hotelLng2}/${dLat},${dLng}/data=!4m2!4m1!3e2`;
   const gmDriveD=`https://www.google.com/maps/dir/${hotelLat2},${hotelLng2}/${dLat},${dLng}/`;
   L.marker([dLat,dLng],{icon:dentistIcon})
-    .bindPopup(`<div class="pw">
-      <div class="pw-name" style="font-size:16px">🦷 Dentist</div>
-      <div class="pw-addr">24 Zakaria Paliashvili St, 0179</div>
-      <div class="pw-from-hotel">🏠 from hotel:
-        <a href="${gmWalkD}" target="_blank" style="color:var(--accent2);text-decoration:none">🚶 20 min ↗</a>&nbsp;&nbsp;<a href="${gmDriveD}" target="_blank" style="color:var(--accent2);text-decoration:none">🚕 7 min ↗</a>
-      </div>
-      <div class="pw-btns">
-        <a href="https://www.google.com/maps/dir/?api=1&destination=${dLat},${dLng}" target="_blank" class="pw-btn pw-a">↗ Directions</a>
-      </div>
-    </div>`,{maxWidth:310})
+    .bindPopup(function(){
+      const nearest = PLACES.map(q=>({q,d:dist({lat:dLat,lng:dLng},q)})).sort((a,b)=>a.d-b.d).slice(0,3);
+      const nearbyHtml = nearest.map(x=>`<strong>${x.q.name}</strong> — ${walk(x.d)}`).join('<br>');
+      return `<div class="pw">
+        <div class="pw-name" style="font-size:16px">🦷 Dentist</div>
+        <div class="pw-addr">24 Zakaria Paliashvili St, 0179</div>
+        <div class="pw-from-hotel">🏠 from hotel:
+          <a href="${gmWalkD}" target="_blank" style="color:var(--accent2);text-decoration:none">🚶 20 min ↗</a>&nbsp;&nbsp;<a href="${gmDriveD}" target="_blank" style="color:var(--accent2);text-decoration:none">🚕 7 min ↗</a>
+        </div>
+        <div class="pw-nearby">📍 Nearby:<br>${nearbyHtml}</div>
+        <div class="pw-btns">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${dLat},${dLng}" target="_blank" class="pw-btn pw-a">↗ Directions</a>
+        </div>
+      </div>`;
+    },{maxWidth:310})
     .addTo(map);
 })();
 
