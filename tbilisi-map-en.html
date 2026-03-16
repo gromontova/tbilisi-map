@@ -685,10 +685,16 @@ function filterCat(cat){
     iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-22]
   });
   const dLat=41.7038, dLng=44.7878;
+  const hotelLat2=41.6981, hotelLng2=44.7930;
+  const gmWalkD=`https://www.google.com/maps/dir/${hotelLat2},${hotelLng2}/${dLat},${dLng}/data=!4m2!4m1!3e2`;
+  const gmDriveD=`https://www.google.com/maps/dir/${hotelLat2},${hotelLng2}/${dLat},${dLng}/`;
   L.marker([dLat,dLng],{icon:dentistIcon})
     .bindPopup(`<div class="pw">
       <div class="pw-name" style="font-size:16px">🦷 Dentist</div>
       <div class="pw-addr">24 Zakaria Paliashvili St, 0179</div>
+      <div class="pw-from-hotel">🏠 from hotel:
+        <a href="${gmWalkD}" target="_blank" style="color:var(--accent2);text-decoration:none">🚶 20 min ↗</a>&nbsp;&nbsp;<a href="${gmDriveD}" target="_blank" style="color:var(--accent2);text-decoration:none">🚕 7 min ↗</a>
+      </div>
       <div class="pw-btns">
         <a href="https://www.google.com/maps/dir/?api=1&destination=${dLat},${dLng}" target="_blank" class="pw-btn pw-a">↗ Directions</a>
       </div>
